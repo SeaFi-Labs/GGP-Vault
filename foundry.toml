@@ -1,0 +1,13 @@
+[profile.default]
+src = 'src'
+out = 'out'
+libs = ['lib']
+solc = "0.8.20"
+build_info = true
+extra_output = ["storageLayout"]
+
+[profile.networks.avalanche]
+rpc_url = "https://api.avax-test.network/ext/bc/C/rpc"
+chain_id = 43113
+
+# See more config options https://github.com/foundry-rs/foundry/tree/master/config
