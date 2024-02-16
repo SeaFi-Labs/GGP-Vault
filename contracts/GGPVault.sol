@@ -47,13 +47,18 @@ contract GGPVault is
         _;
     }
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     /// @notice Initializes the vault with necessary parameters and settings.
     /// @dev Sets up ERC20 token details, initializes inherited contracts, sets the initial owner, GGPCap, and targetAPR.
     /// @param _underlying The address of the GGP token contract.
     /// @param _storageContract The address of the storage contract for accessing external data.
     /// @param _initialOwner The address that will be granted initial ownership of the vault.
     function initialize(address _underlying, address _storageContract, address _initialOwner) external initializer {
-        __ERC20_init("GGPVault", "ggGGP");
+        __ERC20_init("GGPVault", "xGGP");
         __ERC4626_init(IERC20(_underlying));
         __UUPSUpgradeable_init();
         __Ownable2Step_init();

@@ -8,6 +8,7 @@ import {GGPVault} from "../contracts/GGPVault.sol";
 import {MockTokenGGP} from "./mocks/MockTokenGGP.sol";
 import {MockStaking} from "./mocks/MockStaking.sol";
 import {MockStorage} from "./mocks/MockStorage.sol";
+import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 contract GGPVaultTest2 is Test {
     GGPVault vault;
@@ -29,8 +30,11 @@ contract GGPVaultTest2 is Test {
         mockStaking = new MockStaking(ggpToken);
         mockStorage = new MockStorage();
         mockStorage.setAddress(keccak256(abi.encodePacked("contract.address", "staking")), address(mockStaking));
-        vault = new GGPVault();
-        vault.initialize(address(ggpToken), address(mockStorage), GGPVaultMultisig);
+        address proxy = Upgrades.deployUUPSProxy(
+            "GGPVault.sol",
+            abi.encodeCall(GGPVault.initialize, (address(ggpToken), address(mockStorage), GGPVaultMultisig))
+        );
+        vault = GGPVault(proxy);
     }
 
     function testWalkThroughEntireScenario() public {

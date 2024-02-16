@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import {Test} from "forge-std/Test.sol";
 import "forge-std/console.sol";
+import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 import {GGPVault} from "../contracts/GGPVault.sol";
 import {MockTokenGGP} from "./mocks/MockTokenGGP.sol";
@@ -31,8 +32,11 @@ contract GGPVaultTest is Test {
         mockStorage = new MockStorage();
         mockStorage.setAddress(keccak256(abi.encodePacked("contract.address", "staking")), address(mockStaking));
 
-        vault = new GGPVault();
-        vault.initialize(address(ggpToken), address(mockStorage), address(this));
+        address proxy = Upgrades.deployUUPSProxy(
+            "GGPVault.sol",
+            abi.encodeCall(GGPVault.initialize, (address(ggpToken), address(mockStorage), address(this)))
+        );
+        vault = GGPVault(proxy);
         vault.grantRole(vault.APPROVED_NODE_OPERATOR(), nodeOp1);
         ggpToken.approve(address(vault), type(uint256).max);
 
