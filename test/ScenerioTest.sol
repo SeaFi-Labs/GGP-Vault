@@ -16,7 +16,7 @@ contract GGPVaultTest2 is Test {
     MockStorage mockStorage;
     address owner;
 
-    event AssetCapUpdated(uint256 newCap);
+    event GGPCapUpdated(uint256 newCap);
     event DepositedFromStaking(address indexed caller, uint256 amount);
 
     error ERC4626ExceededMaxDeposit(address receiver, uint256 assets, uint256 max);
@@ -41,28 +41,28 @@ contract GGPVaultTest2 is Test {
         ggpToken.transfer(randomUser1, 10000e18);
         ggpToken.transfer(randomUser2, 10000e18);
 
-        address ggpVaultMultisig = address(0x69);
+        address GGPVaultMultisig = address(0x69);
         vault = new GGPVault(); // Deploy the GGP Vault
-        vault.initialize(address(ggpToken), address(mockStorage), ggpVaultMultisig); // initalize it and transfer ownership to our multisig
+        vault.initialize(address(ggpToken), address(mockStorage), GGPVaultMultisig); // initalize it and transfer ownership to our multisig
 
         vm.expectRevert();
-        vault.initialize(address(ggpToken), address(mockStorage), ggpVaultMultisig); // can not initialize again
+        vault.initialize(address(ggpToken), address(mockStorage), GGPVaultMultisig); // can not initialize again
 
         bytes32 nodeOpRole = vault.APPROVED_NODE_OPERATOR();
         bytes32 defaultAdminRole = vault.DEFAULT_ADMIN_ROLE();
 
         vm.expectRevert();
-        vault.grantRole(nodeOpRole, ggpVaultMultisig); // make sure deployer can't grant nodeOp role
+        vault.grantRole(nodeOpRole, GGPVaultMultisig); // make sure deployer can't grant nodeOp role
         vm.expectRevert();
-        vault.grantRole(defaultAdminRole, ggpVaultMultisig); // make sure deployer can't grant admin role
+        vault.grantRole(defaultAdminRole, GGPVaultMultisig); // make sure deployer can't grant admin role
 
         vm.expectRevert();
         vault.transferOwnership(address(0x5)); // make sure deployer can't transfer ownership of contract
 
-        assertEq(vault.owner(), ggpVaultMultisig); // check that the owner is the multisig
-        assertEq(vault.hasRole(defaultAdminRole, ggpVaultMultisig), true); // check that the owner is the multisig
+        assertEq(vault.owner(), GGPVaultMultisig); // check that the owner is the multisig
+        assertEq(vault.hasRole(defaultAdminRole, GGPVaultMultisig), true); // check that the owner is the multisig
 
-        vm.startPrank(ggpVaultMultisig); // start behalving as the multisig
+        vm.startPrank(GGPVaultMultisig); // start behalving as the multisig
 
         vault.grantRole(nodeOpRole, nodeOp1); // grant roles to the both node operators so GGP can be staked on thier behalf
         vault.grantRole(nodeOpRole, nodeOp2); // grant roles to the both node operators so GGP can be staked on thier behalf
@@ -72,8 +72,8 @@ contract GGPVaultTest2 is Test {
         assertEq(vault.stakingTotalAssets(), 0); // check that the owner is the multisig
         assertEq(vault.getStakingContractAddress(), address(mockStaking)); // make sure can fetch staking contract correctly
         assertEq(vault.ggpStorage(), address(mockStorage)); // make sure can fetch staking contract correctly
-        assertEq(vault.assetCap(), 33000e18); // make sure can fetch staking contract correctly
-        assertEq(vault.maxDeposit(ggpVaultMultisig), vault.assetCap()); // make sure can fetch staking contract correctly
+        assertEq(vault.GGPCap(), 33000e18); // make sure can fetch staking contract correctly
+        assertEq(vault.maxDeposit(GGPVaultMultisig), vault.GGPCap()); // make sure can fetch staking contract correctly
         vm.stopPrank();
 
         // Vault seems to be in the expectd state, now lets's get going!
@@ -87,7 +87,7 @@ contract GGPVaultTest2 is Test {
         assertEq(vault.totalAssets(), randomUser1InitialDeposit); // retest
         assertEq(vault.getUnderlyingBalance(), randomUser1InitialDeposit); // retest
         assertEq(vault.stakingTotalAssets(), 0); // retest
-        assertEq(vault.maxDeposit(ggpVaultMultisig), vault.assetCap() - randomUser1InitialDeposit); // retest
+        assertEq(vault.maxDeposit(GGPVaultMultisig), vault.GGPCap() - randomUser1InitialDeposit); // retest
         vm.stopPrank();
 
         vm.startPrank(randomUser2);
@@ -103,7 +103,7 @@ contract GGPVaultTest2 is Test {
         assertEq(vault.totalAssets(), totalDeposits); // retest
         assertEq(vault.getUnderlyingBalance(), totalDeposits); // retest
         assertEq(vault.stakingTotalAssets(), 0); // retest
-        assertEq(vault.maxDeposit(ggpVaultMultisig), vault.assetCap() - totalDeposits); // retest
+        assertEq(vault.maxDeposit(GGPVaultMultisig), vault.GGPCap() - totalDeposits); // retest
 
         // now test that users can burn some of their shares correctly.
         uint256 randomUser2Withdrawal = 100e18; // rounding causes errors
@@ -116,11 +116,11 @@ contract GGPVaultTest2 is Test {
         assertEq(vault.totalAssets(), totalDepositsAfterWithdraw1); // retest
         assertEq(vault.getUnderlyingBalance(), totalDepositsAfterWithdraw1); // retest
         assertEq(vault.stakingTotalAssets(), 0); // retest
-        assertEq(vault.maxDeposit(ggpVaultMultisig), vault.assetCap() - totalDepositsAfterWithdraw1); // retest
+        assertEq(vault.maxDeposit(GGPVaultMultisig), vault.GGPCap() - totalDepositsAfterWithdraw1); // retest
         vm.stopPrank();
 
         // Now let's withdraw the GGP onto a node, and then deposit back from staking
-        vm.startPrank(ggpVaultMultisig); // start behalving as the multisig
+        vm.startPrank(GGPVaultMultisig); // start behalving as the multisig
         uint256 amountToStake = vault.totalAssets();
 
         // done cuz dumb stack depth errors
@@ -128,11 +128,11 @@ contract GGPVaultTest2 is Test {
 
         uint256 stakingRewardsAt20PercentApy = vault.totalAssets() / 62; // rough amount needed for 20%
 
-        vault.stakeOnValidator(amountToStake, nodeOp1_, stakingRewardsAt20PercentApy);
+        vault.stakeOnNode(amountToStake, nodeOp1_, true);
         assertEq(vault.totalAssets(), amountToStake + stakingRewardsAt20PercentApy); // retest
         assertEq(vault.getUnderlyingBalance(), 0); // retest
         assertEq(vault.stakingTotalAssets(), amountToStake + stakingRewardsAt20PercentApy); // retest
-        // assertEq(vault.maxDeposit(ggpVaultMultisig), vault.assetCap() - amountToStake); // retest
+        // assertEq(vault.maxDeposit(GGPVaultMultisig), vault.GGPCap() - amountToStake); // retest
         vm.stopPrank();
 
         // maybe add another section about user depositing here when vault is empty?

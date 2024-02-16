@@ -22,7 +22,7 @@ contract GGPVault is
 
     bytes32 public constant APPROVED_NODE_OPERATOR = keccak256("APPROVED_NODE_OPERATOR");
 
-    event MaxGGPAllowed(uint256 newMax);
+    event GGPCapUpdated(uint256 newMax);
     event TargetAPRUpdated(uint256 newTargetAPR);
     event WithdrawnForStaking(address indexed caller, uint256 assets);
     event DepositedFromStaking(address indexed caller, uint256 amount);
@@ -30,7 +30,7 @@ contract GGPVault is
 
     address public ggpStorage;
     uint256 public stakingTotalAssets;
-    uint256 public maxGGPAllowed;
+    uint256 public GGPCap;
     uint256 public targetAPR;
 
     modifier onlyOwnerOrApprovedNodeOperator() {
@@ -50,13 +50,13 @@ contract GGPVault is
         _transferOwnership(_initialOwner);
         _grantRole(DEFAULT_ADMIN_ROLE, _initialOwner);
         ggpStorage = _storageContract;
-        maxGGPAllowed = 33000e18; // Starting asset cap
+        GGPCap = 33000e18; // Starting asset cap
         targetAPR = 1836; // Starting target APR
     }
 
-    function setMaxGGPAllowed(uint256 GGPDepositLimit) external onlyOwner {
-        maxGGPAllowed = GGPDepositLimit;
-        emit MaxGGPAllowed(maxGGPAllowed);
+    function setGGPCap(uint256 GGPDepositLimit) external onlyOwner {
+        GGPCap = GGPDepositLimit;
+        emit GGPCapUpdated(GGPCap);
     }
 
     function setTargetAPR(uint256 target) external onlyOwner {
@@ -64,7 +64,7 @@ contract GGPVault is
         emit TargetAPRUpdated(targetAPR);
     }
 
-    function stakeAndIncreaseVaultSharePrice(uint256 amount, address nodeOp) external onlyOwnerOrApprovedNodeOperator {
+    function stakeAndDistributeRewards(uint256 amount, address nodeOp) external onlyOwnerOrApprovedNodeOperator {
         _stakeOnNode(amount, nodeOp); // this MUST be called before _distributeRewards
         _distributeRewards();
     }
@@ -90,9 +90,9 @@ contract GGPVault is
         return stakingTotalAssets + getUnderlyingBalance();
     }
 
-    function maxDeposit(address receiver) public view override returns (uint256) {
+    function maxDeposit(address) public view override returns (uint256) {
         uint256 total = totalAssets();
-        return maxGGPAllowed > total ? maxGGPAllowed - total : 0;
+        return GGPCap > total ? GGPCap - total : 0;
     }
 
     function maxMint(address receiver) public view override returns (uint256) {

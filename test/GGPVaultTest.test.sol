@@ -17,7 +17,7 @@ contract GGPVaultTest is Test {
     address owner;
     address nodeOp1 = address(0x9);
 
-    event AssetCapUpdated(uint256 newCap);
+    event GGPCapUpdated(uint256 newCap);
     event DepositedFromStaking(address indexed caller, uint256 amount);
 
     error ERC4626ExceededMaxDeposit(address receiver, uint256 assets, uint256 max);
@@ -42,12 +42,12 @@ contract GGPVaultTest is Test {
         ggpToken.approve(address(vault), type(uint256).max);
     }
 
-    function testStakeOnValidator() public {
+    function teststakeOnNode() public {
         uint256 amount = 10e18; // 10 GGP for simplicity
 
         vault.deposit(amount, msg.sender);
         assertEq(vault.balanceOf(msg.sender), amount, "Depositor gets correct amount of shares");
-        vault.stakeOnValidator(amount, nodeOp1, 0);
+        vault.stakeOnNode(amount, nodeOp1, 0);
 
         assertEq(vault.stakingTotalAssets(), amount, "The staking total assets should be updated");
         assertEq(vault.totalAssets(), amount, "The total assets should be equal to deposits");
@@ -64,7 +64,7 @@ contract GGPVaultTest is Test {
         assertEq(vault.totalAssets(), assetsToDeposit, "The total assets should be equal to deposits");
         assertEq(vault.getUnderlyingBalance(), assetsToDeposit, "The total assets should be equal to deposits");
 
-        vault.stakeOnValidator(assetsToDeposit / 2, nodeOp1, 0);
+        vault.stakeOnNode(assetsToDeposit / 2, nodeOp1, 0);
         assertEq(vault.stakingTotalAssets(), assetsToDeposit / 2, "The staking total assets should be updated");
         assertEq(vault.totalAssets(), assetsToDeposit, "The total assets should be equal to deposits");
         assertEq(vault.getUnderlyingBalance(), assetsToDeposit / 2, "The total assets should be equal to deposits");
@@ -75,7 +75,7 @@ contract GGPVaultTest is Test {
         assertEq(vault.getUnderlyingBalance(), assetsToDeposit, "The total assets should be equal to deposits");
 
         uint256 rewards = 100e18;
-        vault.stakeOnValidator(0, nodeOp1, rewards);
+        vault.stakeOnNode(0, nodeOp1, rewards);
         assertEq(vault.stakingTotalAssets(), rewards, "The staking total assets should be updated");
         assertEq(vault.totalAssets(), assetsToDeposit + rewards, "The total assets should be equal to deposits");
         assertEq(vault.getUnderlyingBalance(), assetsToDeposit, "The total assets should be equal to deposits");
@@ -84,7 +84,7 @@ contract GGPVaultTest is Test {
     function testInitialization() public {
         assertEq(vault.ggpStorage(), address(mockStorage), "GGP Storage should be correctly set");
         assertEq(vault.stakingTotalAssets(), 0, "Staking total assets should initially be 0");
-        assertEq(vault.assetCap(), 33000e18, "Asset cap should be correctly set to 33000e18");
+        assertEq(vault.GGPCap(), 33000e18, "Asset cap should be correctly set to 33000e18");
 
         // Verify the initial owner is correctly set
         assertEq(vault.owner(), owner, "The initial owner should be correctly set");
@@ -102,21 +102,21 @@ contract GGPVaultTest is Test {
         );
     }
 
-    function testSetAssetCapSuccess() public {
-        uint256 newAssetCap = 20000e18; // Define a new asset cap different from the initial one
+    function testSetGGPCapSuccess() public {
+        uint256 newGGPCap = 20000e18; // Define a new asset cap different from the initial one
 
-        // Expect the AssetCapUpdated event to be emitted with the new asset cap value
+        // Expect the GGPCapUpdated event to be emitted with the new asset cap value
         vm.expectEmit(true, true, true, true);
-        emit AssetCapUpdated(newAssetCap);
+        emit GGPCapUpdated(newGGPCap);
 
         // Attempt to set the new asset cap as the owner
-        vault.setAssetCap(newAssetCap);
+        vault.setGGPCap(newGGPCap);
         // Verify the asset cap was successfully updated
-        assertEq(vault.assetCap(), newAssetCap, "Asset cap should be updated to the new value");
+        assertEq(vault.GGPCap(), newGGPCap, "Asset cap should be updated to the new value");
     }
 
-    function testSetAssetCapFailureNonOwner() public {
-        uint256 newAssetCap = 20000e18; // Define a new asset cap
+    function testSetGGPCapFailureNonOwner() public {
+        uint256 newGGPCap = 20000e18; // Define a new asset cap
         address nonOwner = address(0x1); // Assume this address is not the owner
 
         // Set the next caller to be a non-owner
@@ -125,7 +125,7 @@ contract GGPVaultTest is Test {
         // Attempt to set the new asset cap as a non-owner and expect it to revert
         // Adjust the revert message to match the actual error message in your contract
         vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, nonOwner));
-        vault.setAssetCap(newAssetCap);
+        vault.setGGPCap(newGGPCap);
     }
 
     function testDepositFromStakingFailureUnauthorized() public {
@@ -139,12 +139,12 @@ contract GGPVaultTest is Test {
     }
 
     function testMaxDepositUnderNormalConditions() public {
-        uint256 assetCap = 33000e18; // Set the asset cap to 33,000 tokens for this test
+        uint256 GGPCap = 33000e18; // Set the asset cap to 33,000 tokens for this test
         uint256 depositedAssets = 10000e18; // Simulate depositing 10,000 tokens
-        vault.setAssetCap(assetCap);
+        vault.setGGPCap(GGPCap);
         vault.deposit(depositedAssets, address(this)); // Assume deposit function updates total assets correctly
 
-        uint256 expectedMaxDeposit = assetCap - depositedAssets;
+        uint256 expectedMaxDeposit = GGPCap - depositedAssets;
         assertEq(
             vault.maxDeposit(address(this)),
             expectedMaxDeposit,
@@ -153,39 +153,39 @@ contract GGPVaultTest is Test {
     }
 
     function testMaxDepositWhenVaultIsFull() public {
-        uint256 assetCap = 33000e18; // Asset cap is 33,000 tokens
-        vault.setAssetCap(assetCap);
-        vault.deposit(assetCap, address(this)); // Assume the vault is now full
+        uint256 GGPCap = 33000e18; // Asset cap is 33,000 tokens
+        vault.setGGPCap(GGPCap);
+        vault.deposit(GGPCap, address(this)); // Assume the vault is now full
 
         uint256 expectedMaxDeposit = 0;
         assertEq(vault.maxDeposit(address(this)), expectedMaxDeposit, "Max deposit should be 0 when the vault is full");
     }
 
-    function testMaxDepositExceedsAssetCap() public {
-        uint256 assetCap = 33000e18; // Asset cap is 33,000 tokens
+    function testMaxDepositExceedsGGPCap() public {
+        uint256 GGPCap = 33000e18; // Asset cap is 33,000 tokens
         uint256 depositedAssets = 32000e18; // Simulate depositing 32,000 tokens, close to the cap
-        vault.setAssetCap(assetCap);
+        vault.setGGPCap(GGPCap);
         vault.deposit(depositedAssets, address(this)); // Assume deposit function updates total assets correctly
 
-        uint256 expectedMaxDeposit = assetCap - depositedAssets;
+        uint256 expectedMaxDeposit = GGPCap - depositedAssets;
         assertEq(
             vault.maxDeposit(address(this)), expectedMaxDeposit, "Max deposit should not allow exceeding the asset cap"
         );
     }
 
-    function testMaxDepositWithZeroAssetCap() public {
-        uint256 assetCap = 0; // Set the asset cap to 0
-        vault.setAssetCap(assetCap);
+    function testMaxDepositWithZeroGGPCap() public {
+        uint256 GGPCap = 0; // Set the asset cap to 0
+        vault.setGGPCap(GGPCap);
 
         uint256 expectedMaxDeposit = 0;
         assertEq(vault.maxDeposit(address(this)), expectedMaxDeposit, "Max deposit should be 0 with a zero asset cap");
     }
 
     function testMaxDepositWithNoAssetsInVault() public {
-        uint256 assetCap = 33000e18; // Set a non-zero asset cap
-        vault.setAssetCap(assetCap);
+        uint256 GGPCap = 33000e18; // Set a non-zero asset cap
+        vault.setGGPCap(GGPCap);
 
-        uint256 expectedMaxDeposit = assetCap; // With no assets in vault, max deposit should equal the asset cap
+        uint256 expectedMaxDeposit = GGPCap; // With no assets in vault, max deposit should equal the asset cap
         assertEq(
             vault.maxDeposit(address(this)),
             expectedMaxDeposit,
@@ -194,14 +194,14 @@ contract GGPVaultTest is Test {
     }
 
     function testMaxDepositAfterWithdrawals() public {
-        uint256 assetCap = 33000e18;
+        uint256 GGPCap = 33000e18;
         uint256 initialDeposit = 20000e18;
         uint256 withdrawalAmount = 5000e18; // Simulate a withdrawal reducing the total assets
-        vault.setAssetCap(assetCap);
+        vault.setGGPCap(GGPCap);
         vault.deposit(initialDeposit, address(this)); // Assume deposit function updates total assets correctly
         vault.withdraw(withdrawalAmount, address(this), address(this)); // Assume withdrawal function updates total assets correctly
 
-        uint256 expectedMaxDeposit = assetCap - (initialDeposit - withdrawalAmount);
+        uint256 expectedMaxDeposit = GGPCap - (initialDeposit - withdrawalAmount);
         assertEq(
             vault.maxDeposit(address(this)),
             expectedMaxDeposit,
@@ -218,36 +218,36 @@ contract GGPVaultTest is Test {
         vault.deposit(oneMoreThanMaxDeposit, address(this)); // Assume deposit function updates total assets correctly
     }
 
-    function testMaxDepositWithChangingAssetCap() public {
-        uint256 initialAssetCap = 33000e18;
-        uint256 newAssetCap = 50000e18; // Increase the asset cap
+    function testMaxDepositWithChangingGGPCap() public {
+        uint256 initialGGPCap = 33000e18;
+        uint256 newGGPCap = 50000e18; // Increase the asset cap
         uint256 depositedAssets = 10000e18;
-        vault.setAssetCap(initialAssetCap);
+        vault.setGGPCap(initialGGPCap);
         vault.deposit(depositedAssets, address(this)); // Assume deposit function updates total assets correctly
 
         // Increase the asset cap
-        vault.setAssetCap(newAssetCap);
+        vault.setGGPCap(newGGPCap);
 
-        uint256 expectedMaxDeposit = newAssetCap - depositedAssets;
+        uint256 expectedMaxDeposit = newGGPCap - depositedAssets;
         assertEq(vault.maxDeposit(address(this)), expectedMaxDeposit, "Max deposit should reflect the new asset cap");
     }
 
     function testMaxMintScenariosWithExpectedValues() public {
-        uint256 assetCap = 33000e18; // Set the asset cap
-        vault.setAssetCap(assetCap);
+        uint256 GGPCap = 33000e18; // Set the asset cap
+        vault.setGGPCap(GGPCap);
 
         // Assuming the minting calculation is directly related to the asset cap and current total assets
         // For simplicity, let's assume 1 token deposited = 1 share minted (1:1 ratio)
 
         // Test with no assets in vault
-        uint256 expectedMaxMintNoAssets = assetCap; // Since no assets, maxMint should allow up to the asset cap
+        uint256 expectedMaxMintNoAssets = GGPCap; // Since no assets, maxMint should allow up to the asset cap
         uint256 maxMintNoAssets = vault.maxMint(address(this));
         assertEq(maxMintNoAssets, expectedMaxMintNoAssets, "Max mint should equal asset cap with no assets in vault");
 
         // Deposit assets and test under normal conditions
         uint256 initialDeposit = 10000e18;
         vault.deposit(initialDeposit, address(this));
-        uint256 expectedMaxMintNormal = assetCap - initialDeposit; // Adjusted for deposited assets
+        uint256 expectedMaxMintNormal = GGPCap - initialDeposit; // Adjusted for deposited assets
         uint256 maxMintNormal = vault.maxMint(address(this));
         assertEq(maxMintNormal, expectedMaxMintNormal, "Max mint should adjust based on deposited assets");
 
@@ -259,7 +259,7 @@ contract GGPVaultTest is Test {
         assertEq(maxMintAfterWithdrawal, expectedMaxMintAfterWithdrawal, "Max mint should increase after withdrawals");
 
         // Deposit more assets to fill the vault to its cap
-        uint256 additionalDepositToFill = assetCap - initialDeposit + withdrawalAmount;
+        uint256 additionalDepositToFill = GGPCap - initialDeposit + withdrawalAmount;
         vault.deposit(additionalDepositToFill, address(this));
         uint256 maxMintFullVault = vault.maxMint(address(this));
         assertEq(maxMintFullVault, 0, "Max mint should be 0 when vault is full");
