@@ -12,51 +12,51 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
 import "./interfaces/GGPInterfaces.sol";
 
 /// @title GGPVault
-/// @notice A vault for staking tokens with upgradeable functionality, compliant with the ERC4626 standard for tokenized vaults.
-/// @dev Integrates functionalities from OpenZeppelin's UUPS, ERC4626, ERC20, Ownable2Step, and AccessControl upgradeable contracts.
+/// @notice A vault contract for staking tokens with upgradeable functionality through UUPS and ERC4626 standard compliance for tokenized vaults.
+/// @dev This contract integrates functionalities from OpenZeppelin's UUPS, ERC4626, ERC20, Ownable2Step, and AccessControl upgradeable contracts.
 contract GGPVault is
     Initializable,
-    ERC20Upgradeable,
+    Ownable2StepUpgradeable,
     ERC4626Upgradeable,
     UUPSUpgradeable,
-    Ownable2StepUpgradeable,
     AccessControlUpgradeable
 {
     using SafeERC20 for IERC20;
 
-    /// @notice The role identifier for nodes approved to participate in staking operations.
+    /// @notice Role identifier for nodes approved to participate in the staking operations.
     bytes32 public constant APPROVED_NODE_OPERATOR = keccak256("APPROVED_NODE_OPERATOR");
 
-    /// @notice The address of the storage contract for GGP specific data.
+    /// @notice Reference to the storage contract for GGP specific data.
     address public ggpStorage;
 
-    /// @notice The total assets currently staked through the vault.
-    uint256 public stakingTotalAssets;
+    /// @notice Total assets currently staked through the vault.
+    uint256 public stakingTotalAssets = 0;
 
     /// @notice The cap on the total assets the vault can manage.
-    uint256 public assetCap;
+    uint256 public assetCap = 33000e18;
 
-    /// @notice The target annual percentage rate (APR) for staking, expressed in basis points.
-    uint256 public targetAPR;
+    // 20% APY expressed in basis points for clarity
+    uint256 public targetAPR = 1836; // 20% APY
 
-    /// @dev Emitted when the asset cap is updated.
+    /// @notice Emitted when the asset cap is updated.
     event AssetCapUpdated(uint256 newCap);
 
-    /// @dev Emitted when the target APR is updated.
-    event TargetAPRUpdated(uint256 newTargetAPR);
+    event TargetAPRUpdated(uint256 newTargetAPY);
 
-    /// @dev Emitted when assets are withdrawn for staking on behalf of a node operator.
+    /// @notice Emitted when assets are withdrawn for staking on behalf of a node operator.
     event WithdrawnForStaking(address indexed caller, uint256 assets);
 
-    /// @dev Emitted when assets are deposited back into the vault from staking.
+    /// @notice Emitted when assets are deposited back from staking.
     event DepositedFromStaking(address indexed caller, uint256 amount);
 
-    /// @dev Emitted when yield is deposited into the vault, increasing the vault share price.
     event DepositYield(uint256 amount);
+    // Modifier to restrict access to the owner or an approved node operator
 
-    /// @dev Modifier to restrict access to the owner or an approved node operator.
     modifier onlyOwnerOrApprovedNodeOperator() {
-        require(owner() == _msgSender() || hasRole(APPROVED_NODE_OPERATOR, _msgSender()), "Unauthorized");
+        require(
+            hasRole(APPROVED_NODE_OPERATOR, _msgSender()) || owner() == _msgSender(),
+            "Caller is not the owner or an approved node operator"
+        );
         _;
     }
 
@@ -69,13 +69,11 @@ contract GGPVault is
         __ERC4626_init(IERC20(_underlying));
         __UUPSUpgradeable_init();
         __Ownable2Step_init();
-        __AccessControl_init();
         _transferOwnership(_initialOwner);
+        __AccessControl_init();
         _grantRole(DEFAULT_ADMIN_ROLE, _initialOwner);
-        ggpStorage = _storageContract;
-        stakingTotalAssets = 0;
-        assetCap = 33000e18; // Default cap
-        targetAPR = 2000; // 20% APR in basis points
+
+        ggpStorage = (_storageContract);
     }
 
     /// @notice Sets a new cap for the total assets the vault can manage.
@@ -85,90 +83,126 @@ contract GGPVault is
         emit AssetCapUpdated(assetCap);
     }
 
-    /// @notice Sets a new target APR for the vault.
-    /// @param _targetAPR The new target APR in basis points.
     function setTargetAPR(uint256 _targetAPR) external onlyOwner {
         targetAPR = _targetAPR;
-        emit TargetAPRUpdated(targetAPR);
+        emit AssetCapUpdated(targetAPR);
     }
 
-    /// @notice Stakes a specified amount of tokens on behalf of a node operator.
+    /// @notice Allows the staking of a specified amount of tokens on behalf of a node operator.
     /// @param amount The amount of tokens to stake.
     /// @param nodeOp The address of the node operator to stake on behalf of.
-    /// @param distributeRewards If true, distributes rewards by increasing the vault share price.
-    function stakeOnValidator(uint256 amount, address nodeOp, bool distributeRewards)
-        external
-        onlyOwnerOrApprovedNodeOperator
-    {
+    function stakeOnValidator(uint256 amount, address nodeOp, bool distributeRewards) external onlyOwner {
         _checkRole(APPROVED_NODE_OPERATOR, nodeOp);
         stakingTotalAssets += amount;
         if (distributeRewards) {
+            // utility to stake + increase share price in the same transaction
             _increaseVaultSharePrice();
         }
+
         IStakingContractGGP stakingContract = IStakingContractGGP(getStakingContractAddress());
         IERC20(asset()).approve(address(stakingContract), amount);
         stakingContract.stakeGGPOnBehalfOf(nodeOp, amount);
         emit WithdrawnForStaking(nodeOp, amount);
     }
 
-    /// @notice Deposits assets back into the vault from staking activities.
-    /// @param amount The amount of assets to deposit.
-    function depositFromStaking(uint256 amount) external onlyOwnerOrApprovedNodeOperator {
-        require(amount <= stakingTotalAssets, "Exceeds staked");
-        stakingTotalAssets -= amount;
-        emit DepositedFromStaking(_msgSender(), amount);
-        IERC20(asset()).safeTransferFrom(_msgSender(), address(this), amount);
+    function increaseVaultSharePrice() external onlyOwner {
+        _increaseVaultSharePrice();
     }
 
-    /// @notice Retrieves the address of the staking contract from the storage contract.
-    /// @return The address of the staking contract.
-    function getStakingContractAddress() public view returns (address) {
-        return IStorageContractGGP(ggpStorage).getAddress(keccak256(abi.encodePacked("contract.address", "staking")));
-    }
-
-    /// @notice Calculates the total assets managed by the vault, including staked and unstaked assets.
-    /// @return The total assets under management.
-    function totalAssets() public view override returns (uint256) {
-        return stakingTotalAssets + IERC20(asset()).balanceOf(address(this));
-    }
-
-    /// @notice Determines the maximum amount that can be deposited for a given receiver, considering the asset cap.
-    /// @param _receiver The address of the potential receiver of the deposit.
-    /// @return The maximum amount that can be deposited.
-    function maxDeposit(address _receiver) public view override returns (uint256) {
-        uint256 total = totalAssets();
-        return assetCap > total ? assetCap - total : 0;
-    }
-
-    /// @dev Increases the vault share price by depositing yield.
     function _increaseVaultSharePrice() internal {
         uint256 rewardAmount = getExpectedRewardCycleYield();
         stakingTotalAssets += rewardAmount;
         emit DepositYield(rewardAmount);
     }
 
-    /// @notice Calculates the expected yield for a reward cycle.
-    /// @return The expected monthly yield.
-    function getExpectedRewardCycleYield() public view returns (uint256) {
-        uint256 total = totalAssets();
-        return (targetAPR * total) / 10000 / 13;
+    /// @notice Allows depositing assets back into the vault from staking activities.
+    /// @param amount The amount of assets to deposit.
+    function depositFromStaking(uint256 amount) external onlyOwnerOrApprovedNodeOperator {
+        if (amount > stakingTotalAssets) {
+            revert("Can't deposit more than the stakingTotalAssets");
+        }
+        stakingTotalAssets -= amount;
+        emit DepositedFromStaking(msg.sender, amount);
+        IERC20(asset()).safeTransferFrom(msg.sender, address(this), amount);
     }
 
-    /// @notice Calculates the annual percentage yield (APY) from the target APR.
-    /// @dev Compounds monthly.
-    /// @return The APY in basis points.
+    /// @notice Retrieves the address of the staking contract from the storage contract.
+    /// @return The address of the staking contract as IStakingContractGGP.
+    function getStakingContractAddress() public view returns (address) {
+        bytes32 args = keccak256(abi.encodePacked("contract.address", "staking"));
+        IStorageContractGGP storageContract = IStorageContractGGP(ggpStorage);
+        return storageContract.getAddress(args);
+    }
+
+    /// @notice Calculates the total assets managed by the vault including staked and unstaked assets.
+    /// @return The total assets under management.
+    function totalAssets() public view override returns (uint256) {
+        return stakingTotalAssets + getUnderlyingBalance();
+    }
+
+    /// @notice Determines the maximum amount that can be deposited for a given receiver, considering the asset cap.
+    // / @param _receiver The address of the potential receiver of the deposit.
+    /// @return The maximum amount that can be deposited.
+    function maxDeposit(address _receiver) public view override returns (uint256) {
+        uint256 total = totalAssets();
+        return assetCap > total ? assetCap - total : 0;
+    }
+
+    function maxMint(address _receiver) public view override returns (uint256) {
+        uint256 total = totalAssets();
+        if (assetCap > total) return convertToShares(assetCap - total);
+        return 0;
+    }
+
+    function maxRedeem(address owner) public view override returns (uint256) {
+        uint256 ownerBalance = balanceOf(owner);
+        uint256 amountInVault = convertToShares(getUnderlyingBalance());
+        if (amountInVault > ownerBalance) return ownerBalance;
+        return amountInVault;
+    }
+
+    function maxWithdraw(address owner) public view override returns (uint256) {
+        uint256 ownerBalance = convertToAssets(balanceOf(owner));
+        uint256 amountInVault = getUnderlyingBalance();
+        if (amountInVault > ownerBalance) return ownerBalance;
+        return amountInVault;
+    }
+
+    function getExpectedRewardCycleYield() public view returns (uint256) {
+        uint256 total = totalAssets();
+        // Calculate the expected rewardCycle yield: (targetAPR / 100) * total assets / 13
+        // Since targetAPR is in basis points, divide by 10000 to convert it to a percentage
+        uint256 expectedMonthlyYield = (targetAPR * total) / 10000 / 13;
+        return expectedMonthlyYield;
+    }
+
+    /// @notice Gets the balance of underlying assets held by the vault.
+    /// @return The balance of underlying assets.
+    function getUnderlyingBalance() public view returns (uint256) {
+        return IERC20(asset()).balanceOf(address(this));
+    }
+
     function calculateAPYFromAPR() public view returns (uint256) {
-        uint256 compoundingPeriods = 365 / 28; // Compounding monthly
-        uint256 aprFraction = targetAPR * 1e14;
-        uint256 oneScaled = 1e18;
-        uint256 compoundBase = oneScaled + aprFraction / compoundingPeriods;
-        uint256 apyScaled = oneScaled;
+        uint256 daysInYear = 365;
+        uint256 compoundingPeriods = daysInYear / 28; // Compounding every 28 days
+
+        // Convert APR from basis points to a fraction scaled by 1e18 for precision
+        uint256 aprFraction = targetAPR * 1e14; // APR as a fraction of 1, scaled up
+
+        // Compound interest formula: (1 + apr/n)^n - 1
+        // Using a loop to simulate compounding effect
+        uint256 oneScaled = 1e18; // Scale factor for precision
+        uint256 compoundBase = oneScaled + aprFraction / compoundingPeriods; // Base of compounding per period
+        uint256 apyScaled = oneScaled; // Start with 1.0 scaled
 
         for (uint256 i = 0; i < compoundingPeriods; i++) {
             apyScaled = (apyScaled * compoundBase) / oneScaled;
         }
 
-        return (apyScaled - oneScaled) / 1e14;
+        // Convert back to basis points from scaled fraction
+        uint256 apyBasisPoints = (apyScaled - oneScaled) / 1e14; // Subtract 1 (scaled) and convert to basis points
+
+        return apyBasisPoints;
     }
 
     /// @dev Ensures only the owner can authorize upgrades to the contract implementation.
