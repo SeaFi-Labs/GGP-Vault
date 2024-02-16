@@ -15,6 +15,7 @@ contract GGPVaultTest2 is Test {
     MockStaking mockStaking;
     MockStorage mockStorage;
     address owner;
+    address GGPVaultMultisig = address(0x69);
 
     event GGPCapUpdated(uint256 newCap);
     event DepositedFromStaking(address indexed caller, uint256 amount);
@@ -28,9 +29,7 @@ contract GGPVaultTest2 is Test {
         mockStaking = new MockStaking(ggpToken);
         mockStorage = new MockStorage();
         mockStorage.setAddress(keccak256(abi.encodePacked("contract.address", "staking")), address(mockStaking));
-
         vault = new GGPVault();
-        address GGPVaultMultisig = address(0x69);
         vault.initialize(address(ggpToken), address(mockStorage), GGPVaultMultisig);
     }
 
@@ -138,9 +137,14 @@ contract GGPVaultTest2 is Test {
             "Total assets should include staked amount plus rewards"
         );
         vm.stopPrank();
+        assertEq(
+            vault.stakingTotalAssets(),
+            amountToStake + stakingRewardsAt20PercentApy,
+            "Total assets should include staked amount plus rewards"
+        );
+        vm.stopPrank();
 
         // Check max redeem and withdraw for randomUser2
-        vm.startPrank(_nodeOp1);
         uint256 maxRedeemUser2 = vault.maxRedeem(randomUser2);
         uint256 maxWithdrawUser2 = vault.maxWithdraw(randomUser2);
         assertApproxEqAbs(
@@ -155,13 +159,24 @@ contract GGPVaultTest2 is Test {
             10,
             "Preview redeem should approximately equal max withdraw"
         );
-        vm.stopPrank();
-        console.log(
-            vault.maxMint(_randomUser2),
-            vault.maxDeposit(_randomUser2),
-            vault.maxRedeem(_randomUser2),
-            vault.maxWithdraw(_randomUser2)
+
+        ggpToken.transfer(_nodeOp1, stakingRewardsAt20PercentApy);
+
+        vm.startPrank(_nodeOp1);
+
+        // deposit rewards into the vault
+        ggpToken.approve(address(vault), stakingRewardsAt20PercentApy * 2);
+        vault.depositFromStaking(stakingRewardsAt20PercentApy);
+        assertEq(vault.totalAssets(), amountToStake + stakingRewardsAt20PercentApy, "Doesn't change the total assets");
+        assertEq(
+            vault.getUnderlyingBalance(), stakingRewardsAt20PercentApy, "Correct amount of assets are in the vault"
         );
-        // lets walk through another rewards cycle
+        assertEq(vault.stakingTotalAssets(), amountToStake, "Correct amount of assets are being staked");
+        // console.log(
+        //     vault.maxMint(_randomUser2),
+        //     vault.maxDeposit(_randomUser2),
+        //     vault.maxRedeem(_randomUser2),
+        //     vault.maxWithdraw(_randomUser2)
+        // );
     }
 }
