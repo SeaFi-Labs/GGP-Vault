@@ -25,8 +25,7 @@ contract GGPVault is
 {
     using SafeERC20 for IERC20;
 
-    bytes32 public constant APPROVED_NODE_OPERATOR =
-        keccak256("APPROVED_NODE_OPERATOR");
+    bytes32 public constant APPROVED_NODE_OPERATOR = keccak256("APPROVED_NODE_OPERATOR");
 
     event GGPCapUpdated(uint256 newMax);
     event TargetAPRUpdated(uint256 newTargetAPR);
@@ -42,8 +41,7 @@ contract GGPVault is
     /// @notice Restricts functions to the contract owner or approved node operators only.
     modifier onlyOwnerOrApprovedNodeOperator() {
         require(
-            owner() == _msgSender() ||
-                hasRole(APPROVED_NODE_OPERATOR, _msgSender()),
+            owner() == _msgSender() || hasRole(APPROVED_NODE_OPERATOR, _msgSender()),
             "Caller is not the owner or an approved node operator"
         );
         _;
@@ -54,11 +52,7 @@ contract GGPVault is
     /// @param _underlying The address of the GGP token contract.
     /// @param _storageContract The address of the storage contract for accessing external data.
     /// @param _initialOwner The address that will be granted initial ownership of the vault.
-    function initialize(
-        address _underlying,
-        address _storageContract,
-        address _initialOwner
-    ) external initializer {
+    function initialize(address _underlying, address _storageContract, address _initialOwner) external initializer {
         __ERC20_init("GGPVault", "ggGGP");
         __ERC4626_init(IERC20(_underlying));
         __UUPSUpgradeable_init();
@@ -89,10 +83,7 @@ contract GGPVault is
     /// @notice Stakes a specified amount on behalf of a node operator and distributes staking rewards.
     /// @param amount The amount of GGP tokens to stake.
     /// @param nodeOp The address of the node operator on whose behalf the staking is done.
-    function stakeAndDistributeRewards(
-        uint256 amount,
-        address nodeOp
-    ) external onlyOwnerOrApprovedNodeOperator {
+    function stakeAndDistributeRewards(uint256 amount, address nodeOp) external onlyOwnerOrApprovedNodeOperator {
         _stakeOnNode(amount, nodeOp); // this MUST be called before _distributeRewards
         _distributeRewards();
     }
@@ -100,10 +91,7 @@ contract GGPVault is
     /// @notice Stakes a specified amount on behalf of a node operator.
     /// @param amount The amount of GGP tokens to stake.
     /// @param nodeOp The address of the node operator on whose behalf the staking is done.
-    function stakeOnNode(
-        uint256 amount,
-        address nodeOp
-    ) external onlyOwnerOrApprovedNodeOperator {
+    function stakeOnNode(uint256 amount, address nodeOp) external onlyOwnerOrApprovedNodeOperator {
         _stakeOnNode(amount, nodeOp);
     }
 
@@ -114,9 +102,7 @@ contract GGPVault is
 
     /// @notice Allows depositing tokens back into the vault from staking, adjusting the staking total assets accordingly.
     /// @param amount The amount of GGP tokens to deposit back into the vault from staking.
-    function depositFromStaking(
-        uint256 amount
-    ) external onlyOwnerOrApprovedNodeOperator {
+    function depositFromStaking(uint256 amount) external onlyOwnerOrApprovedNodeOperator {
         if (amount > stakingTotalAssets) {
             revert("Cant deposit more than the stakingTotalAssets");
         }
@@ -147,49 +133,41 @@ contract GGPVault is
     }
 
     /// @notice Calculates the maximum amount of underlying assets that can be withdrawn by the owner based on their share balance.
-    /// @param owner The address of the shares owner.
+    /// @param shareOwner The address of the shares shareOwner.
     /// @return The maximum amount of underlying assets that can be withdrawn.
-    function maxWithdraw(address owner) public view override returns (uint256) {
-        uint256 assetsOwnedByOwner = convertToAssets(balanceOf(owner));
+    function maxWithdraw(address shareOwner) public view override returns (uint256) {
+        uint256 assetsOwnedByOwner = convertToAssets(balanceOf(shareOwner));
         uint256 amountInVault = getUnderlyingBalance();
         if (amountInVault > assetsOwnedByOwner) return assetsOwnedByOwner;
         return amountInVault;
     }
 
     /// @notice Calculates the maximum amount of shares that can be redeemed by the owner without exceeding the available balance.
-    /// @param owner The address of the shares owner.
+    /// @param shareOwner The address of the shares shareOwner.
     /// @return The maximum amount of shares that can be redeemed.
-    function maxRedeem(address owner) public view override returns (uint256) {
-        uint256 maxWithdrawAmount = maxWithdraw(owner);
+    function maxRedeem(address shareOwner) public view override returns (uint256) {
+        uint256 maxWithdrawAmount = maxWithdraw(shareOwner);
         return convertToShares(maxWithdrawAmount);
     }
 
     /// @notice Retrieves the address of the staking contract from the storage contract.
     /// @return The address of the staking contract.
     function getStakingContractAddress() public view returns (address) {
-        bytes32 args = keccak256(
-            abi.encodePacked("contract.address", "staking")
-        );
+        bytes32 args = keccak256(abi.encodePacked("contract.address", "staking"));
         IStorageContractGGP storageContract = IStorageContractGGP(ggpStorage);
         return storageContract.getAddress(args);
     }
 
     /// @notice Calculates the rewards based on the current staked amount.
     /// @return The amount of rewards generated based on the current staked assets.
-    function getRewardsBasedOnCurrentStakedAmount()
-        public
-        view
-        returns (uint256)
-    {
+    function getRewardsBasedOnCurrentStakedAmount() public view returns (uint256) {
         return previewRewardsAtStakedAmount(stakingTotalAssets);
     }
 
     /// @notice Previews the rewards for a given stake amount based on the target APR.
     /// @param stakeAmount The amount of GGP tokens staked.
     /// @return The calculated rewards for the given staked amount.
-    function previewRewardsAtStakedAmount(
-        uint256 stakeAmount
-    ) public view returns (uint256) {
+    function previewRewardsAtStakedAmount(uint256 stakeAmount) public view returns (uint256) {
         return (targetAPR * stakeAmount) / 10000 / 13;
     }
 
@@ -220,9 +198,7 @@ contract GGPVault is
         _checkRole(APPROVED_NODE_OPERATOR, nodeOp);
         stakingTotalAssets += amount;
 
-        IStakingContractGGP stakingContract = IStakingContractGGP(
-            getStakingContractAddress()
-        );
+        IStakingContractGGP stakingContract = IStakingContractGGP(getStakingContractAddress());
         IERC20(asset()).approve(address(stakingContract), amount);
         stakingContract.stakeGGPOnBehalfOf(nodeOp, amount);
         emit WithdrawnForStaking(nodeOp, amount);
@@ -237,7 +213,5 @@ contract GGPVault is
 
     /// @dev Ensures that only the owner can authorize upgrades to the contract.
     /// @param newImplementation The address of the new contract implementation.
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal override onlyOwner {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }
