@@ -81,4 +81,55 @@ contract GGPVaultTest is Test {
         assertApproxEqAbs(vault.maxWithdraw(address(this)), depositedAssets, maxDelta, "a");
         assertApproxEqAbs(vault.maxRedeem(address(this)), depositedAssets / 2, maxDelta, "a");
     }
+
+    function testOwnershipNonOwner() public {
+        address randomUser = address(0x1337);
+        bytes memory encodedCall = abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, randomUser);
+        vm.startPrank(randomUser);
+
+        // Random person can't call stuff
+        vm.expectRevert(encodedCall);
+        vault.setGGPCap(0);
+        vm.expectRevert(encodedCall);
+        vault.setTargetAPR(0);
+        vm.expectRevert("Caller is not the owner or an approved node operator");
+        vault.stakeAndDistributeRewards(0, nodeOp1);
+        vm.expectRevert("Caller is not the owner or an approved node operator");
+        vault.stakeOnNode(0, nodeOp1);
+        vm.expectRevert("Caller is not the owner or an approved node operator");
+        vault.distributeRewards();
+        vm.expectRevert("Caller is not the owner or an approved node operator");
+        vault.depositFromStaking(0);
+
+        vm.stopPrank();
+
+        // Node Op can't call stuff
+        bytes memory encodedCallNodeOp = abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, nodeOp1);
+
+        vm.startPrank(nodeOp1);
+        vm.expectRevert(encodedCallNodeOp);
+        vault.setGGPCap(0);
+        vm.expectRevert(encodedCallNodeOp);
+        vault.setTargetAPR(0);
+        vm.stopPrank();
+    }
+
+    function testOwnershipOwner() public {
+        // owner can call all these methods
+        assertEq(address(this), vault.owner());
+        vault.setGGPCap(0);
+        vault.setTargetAPR(0);
+        vault.stakeAndDistributeRewards(0, nodeOp1);
+        vault.stakeOnNode(0, nodeOp1);
+        vault.distributeRewards();
+        vault.depositFromStaking(0);
+
+        // nodeOP can call all these methods
+        vm.startPrank(nodeOp1);
+        vault.stakeAndDistributeRewards(0, nodeOp1);
+        vault.stakeOnNode(0, nodeOp1);
+        vault.distributeRewards();
+        vault.depositFromStaking(0);
+        vm.stopPrank();
+    }
 }
