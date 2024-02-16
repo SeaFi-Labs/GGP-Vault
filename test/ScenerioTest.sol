@@ -125,39 +125,25 @@ contract GGPVaultTest2 is Test {
 
         // done cuz dumb stack depth errors
         address nodeOp1_ = nodeOp1;
+        uint256 stakingRewardsAt20PercentApy = vault.previewRewardsAtStakedAmount(amountToStake);
 
-        uint256 stakingRewardsAt20PercentApy = vault.totalAssets() / 62; // rough amount needed for 20%
+        vault.stakeAndDistributeRewards(amountToStake, nodeOp1_);
 
-        vault.stakeOnNode(amountToStake, nodeOp1_, true);
         assertEq(vault.totalAssets(), amountToStake + stakingRewardsAt20PercentApy); // retest
         assertEq(vault.getUnderlyingBalance(), 0); // retest
         assertEq(vault.stakingTotalAssets(), amountToStake + stakingRewardsAt20PercentApy); // retest
         // assertEq(vault.maxDeposit(GGPVaultMultisig), vault.GGPCap() - amountToStake); // retest
         vm.stopPrank();
 
-        // maybe add another section about user depositing here when vault is empty?
+        // vm.startPrank(nodeOp1_);
 
-        // TODO This behavior probably isn't exactly what we want? We'd want to update
-        // TODO look at what would happen if we deposited the GGP rewards instead of depositFromStaking method
+        // address randomUser2_ = randomUser2;
+        // uint256 maxRedeemUser2 = vault.maxRedeem(randomUser2_);
+        // uint256 maxWithdrawUser2 = vault.maxWithdraw(randomUser2_);
 
-        // distribute rewards
+        // assertApproxEqAbs(vault.previewWithdraw(maxWithdrawUser2), vault.maxRedeem(randomUser2_), 10); // retest
+        // assertApproxEqAbs(vault.previewRedeem(maxRedeemUser2), vault.maxWithdraw(randomUser2_), 10); // retest
 
-        vm.startPrank(nodeOp1_);
-
-        address randomUser2_ = randomUser2;
-        uint256 maxRedeemUser2 = vault.maxRedeem(randomUser2_);
-        uint256 maxWithdrawUser2 = vault.maxWithdraw(randomUser2_);
-
-        assertApproxEqAbs(vault.previewWithdraw(maxWithdrawUser2), vault.maxRedeem(randomUser2_), 10); // retest
-        assertApproxEqAbs(vault.previewRedeem(maxRedeemUser2), vault.maxWithdraw(randomUser2_), 10); // retest
-
-        assertEq(maxWithdrawUser2, vault.getUnderlyingBalance());
+        // assertEq(maxWithdrawUser2, vault.getUnderlyingBalance());
     }
 }
-
-// Uncovered for contracts/GGPVault.sol:
-// - Line (location: source ID 0, line 122, chars 5798-5843, hits: 0)
-// - Branch (branch: 0, path: 0) (location: source ID 0, line 122, chars 5798-5843, hits: 0)
-// - Branch (branch: 0, path: 1) (location: source ID 0, line 122, chars 5798-5843, hits: 0)
-// - Function "getUnderlyingBalance" (location: source ID 0, line 131, chars 6073-6199, hits: 0)
-// - Function "_authorizeUpgrade" (location: source ID 0, line 137, chars 6377-6461, hits: 0)

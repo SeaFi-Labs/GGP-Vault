@@ -42,12 +42,12 @@ contract GGPVaultTest is Test {
         ggpToken.approve(address(vault), type(uint256).max);
     }
 
-    function teststakeOnNode() public {
+    function testStakeOnNode() public {
         uint256 amount = 10e18; // 10 GGP for simplicity
 
         vault.deposit(amount, msg.sender);
         assertEq(vault.balanceOf(msg.sender), amount, "Depositor gets correct amount of shares");
-        vault.stakeOnNode(amount, nodeOp1, 0);
+        vault.stakeOnNode(amount, nodeOp1);
 
         assertEq(vault.stakingTotalAssets(), amount, "The staking total assets should be updated");
         assertEq(vault.totalAssets(), amount, "The total assets should be equal to deposits");
@@ -64,7 +64,7 @@ contract GGPVaultTest is Test {
         assertEq(vault.totalAssets(), assetsToDeposit, "The total assets should be equal to deposits");
         assertEq(vault.getUnderlyingBalance(), assetsToDeposit, "The total assets should be equal to deposits");
 
-        vault.stakeOnNode(assetsToDeposit / 2, nodeOp1, 0);
+        vault.stakeOnNode(assetsToDeposit / 2, nodeOp1);
         assertEq(vault.stakingTotalAssets(), assetsToDeposit / 2, "The staking total assets should be updated");
         assertEq(vault.totalAssets(), assetsToDeposit, "The total assets should be equal to deposits");
         assertEq(vault.getUnderlyingBalance(), assetsToDeposit / 2, "The total assets should be equal to deposits");
@@ -74,8 +74,8 @@ contract GGPVaultTest is Test {
         assertEq(vault.totalAssets(), assetsToDeposit, "The total assets should be equal to deposits");
         assertEq(vault.getUnderlyingBalance(), assetsToDeposit, "The total assets should be equal to deposits");
 
-        uint256 rewards = 100e18;
-        vault.stakeOnNode(0, nodeOp1, rewards);
+        uint256 rewards = vault.getRewardsBasedOnCurrentStakedAmount();
+        vault.distributeRewards();
         assertEq(vault.stakingTotalAssets(), rewards, "The staking total assets should be updated");
         assertEq(vault.totalAssets(), assetsToDeposit + rewards, "The total assets should be equal to deposits");
         assertEq(vault.getUnderlyingBalance(), assetsToDeposit, "The total assets should be equal to deposits");

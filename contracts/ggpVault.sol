@@ -52,6 +52,7 @@ contract GGPVault is
         ggpStorage = _storageContract;
         GGPCap = 33000e18; // Starting asset cap
         targetAPR = 1836; // Starting target APR
+        stakingTotalAssets = 0;
     }
 
     function setGGPCap(uint256 GGPDepositLimit) external onlyOwner {
@@ -119,7 +120,11 @@ contract GGPVault is
     }
 
     function getRewardsBasedOnCurrentStakedAmount() public view returns (uint256) {
-        return (targetAPR * stakingTotalAssets) / 10000 / 13;
+        return previewRewardsAtStakedAmount(stakingTotalAssets);
+    }
+
+    function previewRewardsAtStakedAmount(uint256 stakeAmount) public view returns (uint256) {
+        return (targetAPR * stakeAmount) / 10000 / 13;
     }
 
     function calculateAPYFromAPR() public view returns (uint256) {
