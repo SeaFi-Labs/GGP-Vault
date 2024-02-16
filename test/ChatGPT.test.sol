@@ -274,4 +274,44 @@ contract GGPVaultTest is Test {
             "Max mint should adjust correctly after second withdrawal"
         );
     }
+
+    function testMaxMethods() public {
+        uint256 maxDelta = 1e8;
+
+        uint256 GGPCap = vault.GGPCap();
+        assertEq(vault.maxDeposit(address(this)), GGPCap, "a");
+        assertEq(vault.maxMint(address(this)), GGPCap, "a");
+        assertEq(vault.maxWithdraw(address(this)), 0, "a");
+        assertEq(vault.maxRedeem(address(this)), 0, "a");
+
+        vault.setGGPCap(0);
+        assertEq(vault.maxDeposit(address(this)), 0, "a");
+        assertEq(vault.maxMint(address(this)), 0, "a");
+
+        uint256 newCap = 100e18;
+        vault.setGGPCap(newCap);
+        assertEq(vault.maxDeposit(address(this)), newCap, "a");
+        assertEq(vault.maxMint(address(this)), newCap, "a");
+
+        uint256 depositedAssets = newCap / 2;
+        vault.deposit(depositedAssets, address(this));
+        assertEq(vault.maxDeposit(address(this)), depositedAssets, "a");
+        assertEq(vault.maxMint(address(this)), depositedAssets, "a");
+        assertEq(vault.maxWithdraw(address(this)), depositedAssets, "a");
+        assertEq(vault.maxRedeem(address(this)), depositedAssets, "a");
+
+        // double share value
+        ggpToken.transfer(address(vault), depositedAssets);
+        assertEq(vault.maxDeposit(address(this)), 0, "a");
+        assertEq(vault.maxMint(address(this)), 0, "a");
+        assertApproxEqAbs(vault.maxWithdraw(address(this)), depositedAssets * 2, maxDelta, "a");
+        assertApproxEqAbs(vault.maxRedeem(address(this)), depositedAssets, maxDelta, "a");
+
+        // update values correctly when GGP goes for staking
+        vault.stakeOnNode(depositedAssets, nodeOp1);
+        assertEq(vault.maxDeposit(address(this)), 0, "a");
+        assertEq(vault.maxMint(address(this)), 0, "a");
+        assertApproxEqAbs(vault.maxWithdraw(address(this)), depositedAssets, maxDelta, "a");
+        assertApproxEqAbs(vault.maxRedeem(address(this)), depositedAssets / 2, maxDelta, "a");
+    }
 }
