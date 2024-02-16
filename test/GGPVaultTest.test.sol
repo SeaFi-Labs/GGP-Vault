@@ -75,12 +75,10 @@ contract GGPVaultTest is Test {
         assertEq(vault.getUnderlyingBalance(), assetsToDeposit, "The total assets should be equal to deposits");
 
         uint256 rewards = 100e18;
-        vault.depositFromStaking(rewards);
-        assertEq(vault.stakingTotalAssets(), 0, "The staking total assets should be updated");
+        vault.stakeOnValidator(0, nodeOp1, rewards);
+        assertEq(vault.stakingTotalAssets(), rewards, "The staking total assets should be updated");
         assertEq(vault.totalAssets(), assetsToDeposit + rewards, "The total assets should be equal to deposits");
-        assertEq(
-            vault.getUnderlyingBalance(), assetsToDeposit + rewards, "The total assets should be equal to deposits"
-        );
+        assertEq(vault.getUnderlyingBalance(), assetsToDeposit, "The total assets should be equal to deposits");
     }
 
     function testInitialization() public {
@@ -128,35 +126,6 @@ contract GGPVaultTest is Test {
         // Adjust the revert message to match the actual error message in your contract
         vm.expectRevert(abi.encodeWithSelector(OwnableUnauthorizedAccount.selector, nonOwner));
         vault.setAssetCap(newAssetCap);
-    }
-
-    function testDepositFromStakingSuccess() public {
-        uint256 depositAmount = 100e18; // Example amount
-
-        // Assuming you have a setup function that deploys your contract and sets up initial conditions
-
-        // Mock the token transfer to the contract here if necessary
-
-        // First, test as the owner
-        vm.expectEmit(true, true, true, true);
-        emit DepositedFromStaking(address(this), depositAmount);
-        vault.depositFromStaking(depositAmount);
-        assertEq(vault.stakingTotalAssets(), 0, "stakingTotalAssets should be updated");
-        assertEq(vault.totalAssets(), depositAmount, "stakingTotalAssets should be updated for node operator");
-
-        // Now, test as an approved node operator
-        address approvedNodeOperator = nodeOp1; // Example address
-        vault.grantRole(vault.APPROVED_NODE_OPERATOR(), approvedNodeOperator); // Grant role if not already done in setUp
-
-        vm.startPrank(approvedNodeOperator);
-        vm.expectEmit(true, true, true, true);
-        emit DepositedFromStaking(approvedNodeOperator, depositAmount);
-        vault.depositFromStaking(depositAmount);
-        // Assuming stakingTotalAssets accumulates, adjust the expected value accordingly
-        assertEq(vault.stakingTotalAssets(), 0, "stakingTotalAssets should be updated for node operator");
-        assertEq(vault.totalAssets(), depositAmount * 2, "stakingTotalAssets should be updated for node operator");
-
-        vm.stopPrank();
     }
 
     function testDepositFromStakingFailureUnauthorized() public {

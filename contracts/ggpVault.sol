@@ -101,7 +101,10 @@ contract GGPVault is
     /// @notice Allows depositing assets back into the vault from staking activities.
     /// @param amount The amount of assets to deposit.
     function depositFromStaking(uint256 amount) external onlyOwnerOrApprovedNodeOperator {
-        stakingTotalAssets = amount >= stakingTotalAssets ? 0 : stakingTotalAssets - amount;
+        if (amount > stakingTotalAssets) {
+            revert("Can't deposit more than the stakingTotalAssets");
+        }
+        stakingTotalAssets -= amount;
         emit DepositedFromStaking(msg.sender, amount);
         IERC20(asset()).safeTransferFrom(msg.sender, address(this), amount);
     }
@@ -124,9 +127,6 @@ contract GGPVault is
     // / @param _receiver The address of the potential receiver of the deposit.
     /// @return The maximum amount that can be deposited.
     function maxDeposit(address _receiver) public view override returns (uint256) {
-        if (false) {
-            _receiver;
-        }
         uint256 total = totalAssets();
         return assetCap > total ? assetCap - total : 0;
     }
