@@ -67,7 +67,7 @@ contract GGPVault is
         _grantRole(DEFAULT_ADMIN_ROLE, _initialOwner);
         ggpStorage = _storageContract;
         GGPCap = 33000e18; // Starting asset cap
-        targetAPR = 1836; // Starting target APR
+        targetAPR = 1837; // Starting target APR
         stakingTotalAssets = 0;
     }
 
