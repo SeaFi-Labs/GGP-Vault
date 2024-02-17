@@ -37,6 +37,7 @@ contract GGPVaultTest is Test {
             abi.encodeCall(GGPVault.initialize, (address(ggpToken), address(mockStorage), address(this)))
         );
         vault = GGPVault(proxy);
+
         vault.grantRole(vault.APPROVED_NODE_OPERATOR(), nodeOp1);
         ggpToken.approve(address(vault), type(uint256).max);
 
