@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "./interfaces/GGPInterfaces.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {ERC4626Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
+import {IERC20} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {IStakingContractGGP, IStorageContractGGP} from "./interfaces/GGPInterfaces.sol";
 
 /// @title GGPVault
 /// @notice This contract implements a vault for staking GGP tokens, offering functionalities to stake tokens,
@@ -86,10 +86,11 @@ contract GGPVault is
     }
 
     /// @notice Stakes a specified amount on behalf of a node operator and distributes staking rewards.
-    /// @param amount The amount of GGP tokens to stake.
     /// @param nodeOp The address of the node operator on whose behalf the staking is done.
-    function stakeAndDistributeRewards(uint256 amount, address nodeOp) external onlyOwnerOrApprovedNodeOperator {
-        _stakeOnNode(amount, nodeOp); // this MUST be called before _distributeRewards
+    function stakeAndDistributeRewards(address nodeOp) external onlyOwnerOrApprovedNodeOperator {
+        uint256 currentBalance = getUnderlyingBalance();
+        // TODO just have this take 100% of the GGP in the vault and it can't be frontrun
+        _stakeOnNode(currentBalance, nodeOp); // this MUST be called before _distributeRewards
         _distributeRewards();
     }
 

@@ -1,12 +1,5 @@
 {
-  "editor.formatOnSave": true,
-  "[solidity]": {
-    "editor.defaultFormatter": "JuanBlanco.solidity" 
-  },
-  "solidity.formatter": "forge",
-
-  "solidity.packageDefaultDependenciesContractsDirectory": "src",
+  "solidity.packageDefaultDependenciesContractsDirectory": "contracts",
   "solidity.packageDefaultDependenciesDirectory": "lib",
   "solidity.compileUsingRemoteVersion": "v0.8.20+commit.a1b79de6"
-
 }

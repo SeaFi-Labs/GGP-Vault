@@ -98,7 +98,7 @@ contract GGPVaultTest is Test {
         vm.expectRevert(encodedCall);
         vault.setTargetAPR(0);
         vm.expectRevert("Caller is not the owner or an approved node operator");
-        vault.stakeAndDistributeRewards(0, nodeOp1);
+        vault.stakeAndDistributeRewards(nodeOp1);
         vm.expectRevert("Caller is not the owner or an approved node operator");
         vault.stakeOnNode(0, nodeOp1);
         vm.expectRevert("Caller is not the owner or an approved node operator");
@@ -124,14 +124,14 @@ contract GGPVaultTest is Test {
         assertEq(address(this), vault.owner());
         vault.setGGPCap(0);
         vault.setTargetAPR(0);
-        vault.stakeAndDistributeRewards(0, nodeOp1);
+        vault.stakeAndDistributeRewards(nodeOp1);
         vault.stakeOnNode(0, nodeOp1);
         vault.distributeRewards();
         vault.depositFromStaking(0);
 
         // nodeOP can call all these methods
         vm.startPrank(nodeOp1);
-        vault.stakeAndDistributeRewards(0, nodeOp1);
+        vault.stakeAndDistributeRewards(nodeOp1);
         vault.stakeOnNode(0, nodeOp1);
         vault.distributeRewards();
         vault.depositFromStaking(0);

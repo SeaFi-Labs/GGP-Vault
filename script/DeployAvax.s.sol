@@ -17,7 +17,7 @@ contract MyScript is Script {
         address ggpTokenMainnet = 0x69260B9483F9871ca57f81A90D91E2F96c2Cd11d;
         vm.startBroadcast(deployerPrivateKey);
 
-        address proxy = Upgrades.deployUUPSProxy(
+        Upgrades.deployUUPSProxy(
             "GGPVault.sol", abi.encodeCall(GGPVault.initialize, (ggpTokenMainnet, GGPStorageMainnet, msg.sender))
         );
         vm.stopBroadcast();

@@ -27,7 +27,7 @@ contract MyScript is Script {
         mockStaking = new MockStaking(ggpToken);
         mockStorage = new MockStorage();
         mockStorage.setAddress(keccak256(abi.encodePacked("contract.address", "staking")), address(mockStaking));
-        address proxy = Upgrades.deployUUPSProxy(
+        Upgrades.deployUUPSProxy(
             "GGPVault.sol", abi.encodeCall(GGPVault.initialize, (address(ggpToken), address(mockStorage), devAddress4))
         );
 

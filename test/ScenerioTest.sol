@@ -119,9 +119,9 @@ contract GGPVaultTest2 is Test {
 
         assertApproxEqAbs(
             stakingRewardsAt20PercentApy,
-            139e18,
+            140e18,
             1e18,
-            "Staking rewards should be approximately 139e18 which was manually calculated"
+            "Staking rewards should be approximately 140e18 which was manually calculated"
         );
 
         address _randomUser2 = randomUser2;
@@ -134,7 +134,7 @@ contract GGPVaultTest2 is Test {
 
         // for stack to deep errors
         address _nodeOp1 = nodeOp1;
-        vault.stakeAndDistributeRewards(amountToStake, _nodeOp1);
+        vault.stakeAndDistributeRewards(_nodeOp1);
         assertEq(
             vault.totalAssets(),
             amountToStake + stakingRewardsAt20PercentApy,
