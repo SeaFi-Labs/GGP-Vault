@@ -30,7 +30,7 @@ contract GGPVaultTest is Test {
         ggpToken = new MockTokenGGP(address(this));
         mockStaking = new MockStaking(ggpToken);
         mockStorage = new MockStorage();
-        mockStorage.setAddress(keccak256(abi.encodePacked("contract.address", "staking")), address(mockStaking));
+        mockStorage.setAddress(keccak256(abi.encodePacked("contract.address", "Staking")), address(mockStaking));
 
         address proxy = Upgrades.deployUUPSProxy(
             "GGPVault.sol",

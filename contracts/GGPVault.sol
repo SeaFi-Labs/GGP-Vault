@@ -159,7 +159,7 @@ contract GGPVault is
     /// @notice Retrieves the address of the staking contract from the storage contract.
     /// @return The address of the staking contract.
     function getStakingContractAddress() public view returns (address) {
-        bytes32 args = keccak256(abi.encodePacked("contract.address", "staking"));
+        bytes32 args = keccak256(abi.encodePacked("contract.address", "Staking"));
         IStorageContractGGP storageContract = IStorageContractGGP(ggpStorage);
         return storageContract.getAddress(args);
     }

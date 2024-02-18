@@ -6,11 +6,16 @@ solc = "0.8.20"
 build_info = true
 extra_output = ["storageLayout"]
 
-[profile.networks.avalanche]
+[profile.networks.fuji]
 rpc_url = "https://api.avax-test.network/ext/bc/C/rpc"
 chain_id = 43113
 
+[profile.networks.avax]
+rpc_url = "https://api.avax.network/ext/bc/C/rpc"
+chain_id = 43114
+
 [rpc_endpoints]
 fuji = "https://api.avax-test.network/ext/bc/C/rpc"
+axax = "https://api.avax.network/ext/bc/C/rpc"
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config

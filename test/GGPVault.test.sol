@@ -30,7 +30,7 @@ contract GGPVaultTest is Test {
         ggpToken = new MockTokenGGP(address(this));
         mockStaking = new MockStaking(ggpToken);
         mockStorage = new MockStorage();
-        mockStorage.setAddress(keccak256(abi.encodePacked("contract.address", "staking")), address(mockStaking));
+        mockStorage.setAddress(keccak256(abi.encodePacked("contract.address", "Staking")), address(mockStaking));
 
         address proxy = Upgrades.deployUUPSProxy(
             "GGPVault.sol",
@@ -48,6 +48,7 @@ contract GGPVaultTest is Test {
     }
 
     function testMaxMethods() public {
+        console.logBytes32(keccak256(abi.encodePacked("contract.address", "Staking")));
         uint256 maxDelta = 1e8;
 
         uint256 GGPCap = vault.GGPCap();
@@ -136,5 +137,75 @@ contract GGPVaultTest is Test {
         vault.distributeRewards();
         vault.depositFromStaking(0);
         vm.stopPrank();
+    }
+
+    function getImplementationAddress(address proxy) public returns (address implementation) {
+        bytes32 slot = bytes32(uint256(keccak256("eip1967.proxy.implementation")) - 1);
+        bytes32 data = vm.load(proxy, slot);
+        implementation = address(uint160(uint256(data)));
+    }
+
+    function testInitalization() public {
+        vm.expectRevert();
+        vault.initialize(owner, owner, owner);
+        address implementationAddress = getImplementationAddress(address(vault));
+        GGPVault implementation = GGPVault(implementationAddress);
+        vm.expectRevert();
+        implementation.initialize(owner, owner, owner);
+    }
+
+    function testStakeAndDistributeRewards() public {
+        assertEq(vault.totalAssets(), 0);
+        vault.stakeAndDistributeRewards(nodeOp1);
+        assertEq(vault.totalAssets(), 0, "rewards remain 0 when no staking asssets");
+        vault.stakeAndDistributeRewards(nodeOp1);
+        vault.stakeAndDistributeRewards(nodeOp1);
+        vault.stakeAndDistributeRewards(nodeOp1);
+        assertEq(vault.totalAssets(), 0, "calling multiple times doesnt change if stakingAssets is 0");
+
+        uint256 originalDeposit = 100e18;
+        vault.deposit(originalDeposit, address(this));
+        vault.stakeAndDistributeRewards(nodeOp1);
+        uint256 expectedStakeAmount = vault.previewRewardsAtStakedAmount(originalDeposit) + originalDeposit;
+        assertEq(vault.stakingTotalAssets(), expectedStakeAmount, "confirm assets were staked + rewarded correctly");
+
+        // calling again should cause it to increase rewards again
+        vault.stakeAndDistributeRewards(nodeOp1);
+        uint256 expectedStakeAmount2 = vault.previewRewardsAtStakedAmount(expectedStakeAmount) + expectedStakeAmount;
+        assertEq(
+            vault.stakingTotalAssets(),
+            expectedStakeAmount2,
+            "confirm assets were staked + rewarded correctly when calling 2x in a row (which shouldnt be done)"
+        );
+
+        // works even with GGP max supply
+    }
+
+    function testRewardsAtHighValues() public {
+        uint256 halfMaxSupply = ggpToken.totalSupply() / 2;
+        vault.setGGPCap(halfMaxSupply * 2);
+        vault.deposit(halfMaxSupply, address(this));
+        vault.stakeAndDistributeRewards(nodeOp1);
+        uint256 expectedRewards = vault.previewRewardsAtStakedAmount(halfMaxSupply);
+        uint256 expectedStakeAmount = expectedRewards + halfMaxSupply;
+        assertEq(vault.stakingTotalAssets(), expectedStakeAmount, "confirm assets were staked + rewarded correctly");
+    }
+
+    function testPreviewRewardsChangesWithAPR() public {
+        uint256 stakeAmount = 10000e18; // 10k GGP token
+        uint256 maxDelta = 1e18;
+        uint256 percent5 = 500; // 5% APR
+        uint256 percent15 = 1500; // 15% APR
+        uint256 percent50 = 5000; // 15% APR
+
+        vault.setTargetAPR(percent5); // Set initial APR
+        uint256 rewardsAt5 = vault.previewRewardsAtStakedAmount(stakeAmount);
+        vault.setTargetAPR(percent15); // Change APR
+        uint256 rewardsAt15 = vault.previewRewardsAtStakedAmount(stakeAmount);
+        vault.setTargetAPR(percent50); // Change APR
+        uint256 rewardsAt50 = vault.previewRewardsAtStakedAmount(stakeAmount);
+        assertApproxEqAbs(rewardsAt5, 38e18, maxDelta);
+        assertApproxEqAbs(rewardsAt15, 115e18, maxDelta);
+        assertApproxEqAbs(rewardsAt50, 384e18, maxDelta);
     }
 }
