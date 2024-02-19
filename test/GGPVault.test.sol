@@ -6,6 +6,7 @@ import "forge-std/console.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 import {GGPVault} from "../contracts/GGPVault.sol";
+import {GGPVaultV2} from "./mocks/GGPVaultV2.sol";
 import {MockTokenGGP} from "./mocks/MockTokenGGP.sol";
 import {MockStaking} from "./mocks/MockStaking.sol";
 import {MockStorage} from "./mocks/MockStorage.sol";
@@ -229,5 +230,15 @@ contract GGPVaultTest is Test {
         assertTrue(vault.previewRedeem(1e18) > 1e18, "vault value should increase if sending assets to vault");
     }
 
-    function testCanUpgrade() public {}
+    function testCanUpgrade() public {
+        address implAddressV1 = Upgrades.getImplementationAddress(address(vault));
+
+        assertEq(vault.targetAPR(), 1837);
+        Upgrades.upgradeProxy(address(vault), "GGPVaultV2.sol", abi.encodeCall(GGPVault.setTargetAPR, 2000));
+        address implAddressV2 = Upgrades.getImplementationAddress(address(vault));
+
+        GGPVaultV2 v2 = GGPVaultV2(address(vault));
+        assertFalse(implAddressV2 == implAddressV1);
+        assertEq(v2.newMethod(), "meow");
+    }
 }
