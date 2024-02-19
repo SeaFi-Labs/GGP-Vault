@@ -319,4 +319,11 @@ contract GGPVaultTest is Test {
         assertApproxEqAbs(vault.maxWithdraw(address(this)), depositedAssets, maxDelta, "a");
         assertApproxEqAbs(vault.maxRedeem(address(this)), depositedAssets / 2, maxDelta, "a");
     }
+
+    function testCalculateAPYFromAPR() public {
+        vault.setTargetAPR(1837); // Set the target APR to 18.37%
+        uint256 expectedAPYFor1837 = 2001; // Expected APY in basis points (example value)
+        uint256 calculatedAPYFor1837 = vault.calculateAPYFromAPR();
+        assertEq(calculatedAPYFor1837, expectedAPYFor1837, "APY calculation for APR 1837 does not match expected value");
+    }
 }
