@@ -98,6 +98,8 @@ contract GGPVaultTest is Test {
         vault.setGGPCap(0);
         vm.expectRevert(encodedCall);
         vault.setTargetAPR(0);
+        vm.expectRevert(encodedCall);
+        vault.upgradeToAndCall(address(0x0), "0x");
         vm.expectRevert("Caller is not the owner or an approved node operator");
         vault.stakeAndDistributeRewards(nodeOp1);
         vm.expectRevert("Caller is not the owner or an approved node operator");
@@ -139,16 +141,10 @@ contract GGPVaultTest is Test {
         vm.stopPrank();
     }
 
-    function getImplementationAddress(address proxy) public returns (address implementation) {
-        bytes32 slot = bytes32(uint256(keccak256("eip1967.proxy.implementation")) - 1);
-        bytes32 data = vm.load(proxy, slot);
-        implementation = address(uint160(uint256(data)));
-    }
-
     function testInitalization() public {
         vm.expectRevert();
         vault.initialize(owner, owner, owner);
-        address implementationAddress = getImplementationAddress(address(vault));
+        address implementationAddress = Upgrades.getImplementationAddress(address(vault));
         GGPVault implementation = GGPVault(implementationAddress);
         vm.expectRevert();
         implementation.initialize(owner, owner, owner);
@@ -232,4 +228,6 @@ contract GGPVaultTest is Test {
         // console.log(vault.previewRedeem((1e18)), vault.getUnderlyingBalance());
         assertTrue(vault.previewRedeem(1e18) > 1e18, "vault value should increase if sending assets to vault");
     }
+
+    function testCanUpgrade() public {}
 }
