@@ -18,8 +18,9 @@ contract GGPVaultTest is Test {
     address owner;
     address nodeOp1 = address(0x9);
 
-    event GGPCapUpdated(uint256 newCap);
     event DepositedFromStaking(address indexed caller, uint256 amount);
+
+    event GGPCapUpdated(uint256 newCap);
 
     error ERC4626ExceededMaxDeposit(address receiver, uint256 assets, uint256 max);
 
@@ -48,7 +49,6 @@ contract GGPVaultTest is Test {
     }
 
     function testMaxMethods() public {
-        console.logBytes32(keccak256(abi.encodePacked("contract.address", "Staking")));
         uint256 maxDelta = 1e8;
 
         uint256 GGPCap = vault.GGPCap();
@@ -207,5 +207,29 @@ contract GGPVaultTest is Test {
         assertApproxEqAbs(rewardsAt5, 38e18, maxDelta);
         assertApproxEqAbs(rewardsAt15, 115e18, maxDelta);
         assertApproxEqAbs(rewardsAt50, 384e18, maxDelta);
+    }
+
+    function testCantOverpayVault() public {
+        vm.startPrank(nodeOp1);
+        vm.expectRevert("Cant deposit more than the stakingTotalAssets");
+        vault.depositFromStaking(1e18);
+
+        vault.depositFromStaking(0);
+
+        uint256 depositAmount = 1000e18;
+        vault.deposit(depositAmount, nodeOp1);
+        vault.stakeOnNode(depositAmount, nodeOp1);
+
+        vm.expectRevert("Cant deposit more than the stakingTotalAssets");
+        vault.depositFromStaking(depositAmount + 1);
+
+        vault.depositFromStaking(depositAmount);
+
+        // nodeOP can deposit more assets with a transfer if needed
+        uint256 manuallySendAmount = 100e18;
+        ggpToken.transfer(address(vault), manuallySendAmount);
+        assertEq(vault.getUnderlyingBalance(), depositAmount + manuallySendAmount);
+        // console.log(vault.previewRedeem((1e18)), vault.getUnderlyingBalance());
+        assertTrue(vault.previewRedeem(1e18) > 1e18, "vault value should increase if sending assets to vault");
     }
 }
