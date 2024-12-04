@@ -5,5 +5,5 @@ There is currently no way for people holding GGP to earn yield on their tokens w
 
 # Links
 - **SeaFi Website:** [seafi.app](https://seafi.app)
-- **SeaFi App:** [vault.seafi.app](https://vaults.seafi.app)
+- **SeaFi App:** [vaults.seafi.app](https://vaults.seafi.app)
 - **SeaFi Docs:** [docs.seafi.app](https://docs.seafi.app)
